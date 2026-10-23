@@ -1,7 +1,9 @@
 import { loadConfig } from "./config.js";
 import { checkAvailability } from "./checker.js";
 import { createLogger } from "./logger.js";
+import { randomIntervalMs } from "./schedule.js";
 import { sendTelegramMessage } from "./telegram.js";
+import { checkAvailabilityWithUia } from "./uia-checker.js";
 
 async function run(config, state, logger) {
   const startedAt = Date.now();
@@ -9,7 +11,10 @@ async function run(config, state, logger) {
     logger.info("Availability check started", {
       serviceText: config.serviceText
     });
-    const result = await checkAvailability(config, logger);
+    const result =
+      config.browserMode === "uia"
+        ? await checkAvailabilityWithUia(config, logger)
+        : await checkAvailability(config, logger);
 
     if (result.status === "fully-booked") {
       logger.info("No appointments available", {
@@ -64,11 +69,19 @@ const logger = createLogger(config.logFile, [
 logger.info("Runner started", {
   baseUrl: config.baseUrl,
   serviceText: config.serviceText,
-  intervalMinutes: config.intervalMs / 60000,
+  intervalMinutesMin: config.intervalMinMs / 60000,
+  intervalMinutesMax: config.intervalMaxMs / 60000,
   runOnce: config.runOnce,
   headless: config.headless,
+  debugMode: config.debugMode,
+  debugStepDelayMs: config.debugStepDelayMs,
+  debugHoldSeconds: config.debugHoldMs / 1000,
+  telegramEnabled: config.telegramEnabled,
   timezone: config.timezoneId,
   artifactsDirectory: config.artifactsDir,
+  browserType: config.browserType,
+  browserChannel: config.browserChannel,
+  browserMode: config.browserMode,
   browserProfileDirectory: config.browserProfileDir,
   logFile: config.logFile
 });
@@ -77,13 +90,19 @@ await run(config, state, logger);
 
 if (!config.runOnce) {
   logger.info("Continuous monitoring enabled", {
-    intervalMinutes: config.intervalMs / 60000
+    intervalMinutesMin: config.intervalMinMs / 60000,
+    intervalMinutesMax: config.intervalMaxMs / 60000
   });
   while (true) {
+    const delayMs = randomIntervalMs(
+      config.intervalMinMs,
+      config.intervalMaxMs
+    );
     logger.info("Waiting for next scheduled check", {
-      intervalMinutes: config.intervalMs / 60000
+      delaySeconds: Math.round(delayMs / 1000),
+      delayMinutes: Number((delayMs / 60000).toFixed(2))
     });
-    await new Promise((resolve) => setTimeout(resolve, config.intervalMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
     await run(config, state, logger);
   }
 } else {

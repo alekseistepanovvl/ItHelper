@@ -1,4 +1,11 @@
 export async function sendTelegramMessage(config, message, logger) {
+  if (!config.telegramEnabled) {
+    logger.info("Telegram notification skipped (dry run)", {
+      message
+    });
+    return;
+  }
+
   logger.info("Sending Telegram notification", {
     chatId: config.telegramChatId,
     messageLength: message.length

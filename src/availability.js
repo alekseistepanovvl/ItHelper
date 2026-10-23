@@ -1,5 +1,5 @@
 export const FULLY_BOOKED_MESSAGE =
-  "Sorry, all appointments for this service are currently booked.";
+  "Sorry, all appointments for this service are currently booked. Please check again tomorrow for cancellations or new appointments.";
 
 const BLOCKING_PATTERNS = [
   /\bcaptcha\b/i,
@@ -22,4 +22,3 @@ export function classifyPage(text) {
 
   return { status: "possible-availability", text: normalized };
 }
-
